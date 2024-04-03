@@ -16,3 +16,7 @@ serde_json = "1.0.115"
 
 dotenvy = "0.15.7"
 chrono = { version = "0.4.37", features = ["serde"] }
+
+[dev-dependencies]
+http-body-util = "0.1.0"
+tower = { version = "0.4", features = ["util"] }
