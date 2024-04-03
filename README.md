@@ -1,4 +1,18 @@
 ## Getting Started
+We are creating a backend that serve users to create and provision their workspaces.
+Workspace should have a name, a description in free text, create and update time and owner
+user id. Workspaces have 4 statuses:
+- Inactive
+- Active
+- Expired
+- Provisioning
+We need API endpoint to:
+- Get workspace by ID.
+- List all workspaces.
+- Create workspace.
+- Update workspace status.
+The user id for each of these operations are to be extracted from HTTP Header.
+
 Please follow below instruction to run the project.
 
 ### Requirements
