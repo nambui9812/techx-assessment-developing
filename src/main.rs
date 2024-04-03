@@ -10,7 +10,7 @@ use tokio::net::TcpListener;
 use sqlx::postgres::PgPoolOptions;
 
 use users::{get_users, create_user, delete_user};
-use workspaces::{get_workspaces, get_workspace_by_id, create_workspace, update_workspace_status, delete_workspace};
+use workspaces::{get_workspaces, get_workspace_by_id, create_workspace, update_workspace_status, };
 
 #[tokio::main]
 async fn main() {
@@ -32,7 +32,7 @@ async fn main() {
         .route("/users", get(get_users).post(create_user))
         .route("/users/:user_id", delete(delete_user))
         .route("/workspaces", get(get_workspaces).post(create_workspace))
-        .route("/workspaces/:workspace_id", get(get_workspace_by_id).put(update_workspace_status).delete(delete_workspace))
+        .route("/workspaces/:workspace_id", get(get_workspace_by_id).put(update_workspace_status))
         .with_state(db_pool);
 
     axum::serve(listener, app).await.unwrap();

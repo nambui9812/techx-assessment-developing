@@ -40,9 +40,13 @@ pub struct UpdateWorkspaceStatusReq {
 }
 
 pub async fn get_workspaces(
+    headers: HeaderMap,
     State(pool): State<PgPool>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    let workspaces = sqlx::query_as::<_, WorkspaceRow>("SELECT * FROM workspaces")
+    let onwer_id: i32 = headers.get("x-owner").unwrap().to_str().unwrap().to_owned().parse().expect("Invalid headers");
+
+    let workspaces = sqlx::query_as::<_, WorkspaceRow>("SELECT * FROM workspaces WHERE owner_id = $1")
+        .bind(onwer_id)
         .fetch_all(&pool)
         .await
         .map_err(|e| {
@@ -59,11 +63,15 @@ pub async fn get_workspaces(
 }
 
 pub async fn get_workspace_by_id(
+    headers: HeaderMap,
     State(pool): State<PgPool>,
     Path(workspace_id): Path<i32>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    let workspace = sqlx::query_as::<_, WorkspaceRow>("SELECT * FROM workspaces WHERE id = $1")
+    let onwer_id: i32 = headers.get("x-owner").unwrap().to_str().unwrap().to_owned().parse().expect("Invalid headers");
+
+    let workspace = sqlx::query_as::<_, WorkspaceRow>("SELECT * FROM workspaces WHERE id = $1 AND owner_id = $2")
         .bind(workspace_id)
+        .bind(onwer_id)
         .fetch_one(&pool)
         .await
         .map_err(|e| {
@@ -80,8 +88,8 @@ pub async fn get_workspace_by_id(
 }
 
 pub async fn create_workspace(
-    State(pool): State<PgPool>,
     headers: HeaderMap,
+    State(pool): State<PgPool>,
     Json(body): Json<CreateWorkspaceReq>
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
     let onwer_id: i32 = headers.get("x-owner").unwrap().to_str().unwrap().to_owned().parse().expect("Invalid headers");
@@ -107,17 +115,16 @@ pub async fn create_workspace(
 }
 
 pub async fn update_workspace_status(
-    State(pool): State<PgPool>,
     headers: HeaderMap,
+    State(pool): State<PgPool>,
     Path(workspace_id): Path<i32>,
     Json(body): Json<UpdateWorkspaceStatusReq>
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
     let onwer_id: i32 = headers.get("x-owner").unwrap().to_str().unwrap().to_owned().parse().expect("Invalid headers");
 
-    let workspace = sqlx::query_as::<_, WorkspaceRow>("UPDATE workspaces SET status = $1 WHERE id = $2 RETURNING *")
+    let workspace = sqlx::query_as::<_, WorkspaceRow>("UPDATE workspaces SET status = $1 WHERE id = $2 AND owner_id = $3 RETURNING *")
         .bind(body.status)
         .bind(workspace_id)
-        .bind(Status::Active)
         .bind(onwer_id)
         .fetch_one(&pool)
         .await
@@ -134,7 +141,73 @@ pub async fn update_workspace_status(
     ))
 }
 
-pub async fn delete_workspace(
+
+// For easier development process
+
+pub async fn _get_workspaces(
+    State(pool): State<PgPool>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let workspaces = sqlx::query_as::<_, WorkspaceRow>("SELECT * FROM workspaces")
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                json!({ "success": false, "message": e.to_string() }).to_string()
+            )
+        })?;
+
+    Ok((
+        StatusCode::OK,
+        json!({ "success": true, "data": workspaces }).to_string()
+    ))
+}
+
+pub async fn _get_workspace_by_id(
+    State(pool): State<PgPool>,
+    Path(workspace_id): Path<i32>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let workspace = sqlx::query_as::<_, WorkspaceRow>("SELECT * FROM workspaces WHERE id = $1")
+        .bind(workspace_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                json!({ "success": false, "message": e.to_string() }).to_string()
+            )
+        })?;
+
+    Ok((
+        StatusCode::OK,
+        json!({ "success": true, "data": workspace }).to_string()
+    ))
+}
+
+pub async fn _update_workspace_status(
+    State(pool): State<PgPool>,
+    Path(workspace_id): Path<i32>,
+    Json(body): Json<UpdateWorkspaceStatusReq>
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let workspace = sqlx::query_as::<_, WorkspaceRow>("UPDATE workspaces SET status = $1 WHERE id = $2 RETURNING *")
+        .bind(body.status)
+        .bind(workspace_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                json!({ "success": false, "message": e.to_string() }).to_string()
+            )
+        })?;
+    
+    Ok((
+        StatusCode::CREATED,
+        json!({ "success": true, "data": workspace }).to_string()
+    ))
+}
+
+pub async fn _delete_workspace(
     State(pool): State<PgPool>,
     Path(workspace_id): Path<i32>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
