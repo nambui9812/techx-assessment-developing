@@ -6,6 +6,7 @@ user id. Workspaces have 4 statuses:
 - Active
 - Expired
 - Provisioning
+
 We need API endpoint to:
 - Get workspace by ID.
 - List all workspaces.
