@@ -37,10 +37,6 @@ cd techx-assessment-developing
 ```
 docker compose up -d
 ```
-2. Run migration
-```
-Follow the Migration instruction below
-```
 * Without Docker
 1. Start PostgreSQL server (If needed)
 ```
@@ -56,6 +52,11 @@ cargo build
 cargo run
 ```
 ### Migration
+* With Docker
+```
+Migrations will run automatically
+```
+* Without Docker (Or for tests)
 * Requirements
 1. PostgreSQL server is running
 2. .env file has valid `DATABASE_URL` field
@@ -63,16 +64,17 @@ cargo run
 ```
 sudo apt install pkg-config
 cargo install sqlx-cli
+Or cargo install sqlx-cli --no-default-features --features native-tls,postgres	(Only for postgres)
 ```
 * Steps
 1. Create database and run migrations
 ```
-sqlx database create	(If database not exists yet)
-sqlx migration run
+sqlx database create	(If database not exists yet when starting without Docker)
+sqlx migration run --source ./db/migrations-for-tests (for test)
 ```
 2. (Optional) Revert database if needed
 ```
-sqlx migration revert	(Revert step by step)
+sqlx migration revert --source ./db/migrations-for-tests (for test) (Revert step by step)
 sqlx database drop		(Drop the database)
 ```
 ### Usage
@@ -114,10 +116,10 @@ sqlx database drop		(Drop the database)
 ```
 ### Test
 * Requirements
-1. PostgreSQL server is running
+1. PostgreSQL server is running (Locally with valid config based on DATABASE_URL in .env file Or from Docker-Compose `docker compose up -d pg`)
 2. Migrations were run, fake data was created
 ```
-sqlx migrate run
+sqlx migrate run --source ./db/migrations-for-tests (for test)
 ```
 * Run
 ```

@@ -23,6 +23,9 @@ async fn main() {
         .await
         .expect("Cannot connect to database");
 
+    let _ = sqlx::migrate!("db/migrations").run(&db_pool).await;
+        
+
     let listener = TcpListener::bind("0.0.0.0:8080").await.unwrap();
 
     let app = Router::new()

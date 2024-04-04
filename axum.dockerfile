@@ -5,6 +5,6 @@ WORKDIR /usr/src/app
 
 COPY . .
 
-RUN cargo build
+RUN cargo build 
 
 CMD [ "cargo", "run" ]
