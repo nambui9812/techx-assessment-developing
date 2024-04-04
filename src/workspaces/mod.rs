@@ -161,7 +161,7 @@ pub async fn update_workspace_status(
 
 // ---------------------- For easier development process ----------------------
 
-pub async fn _get_workspaces(
+async fn _get_workspaces(
     State(pool): State<PgPool>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
     let workspaces = sqlx::query_as::<_, WorkspaceRow>("SELECT * FROM workspaces")
@@ -180,7 +180,7 @@ pub async fn _get_workspaces(
     ))
 }
 
-pub async fn _get_workspace_by_id(
+async fn _get_workspace_by_id(
     State(pool): State<PgPool>,
     Path(workspace_id): Path<i32>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
@@ -201,7 +201,7 @@ pub async fn _get_workspace_by_id(
     ))
 }
 
-pub async fn _update_workspace_status(
+async fn _update_workspace_status(
     State(pool): State<PgPool>,
     Path(workspace_id): Path<i32>,
     Json(body): Json<UpdateWorkspaceStatusReq>
@@ -224,7 +224,7 @@ pub async fn _update_workspace_status(
     ))
 }
 
-pub async fn _delete_workspace(
+async fn _delete_workspace(
     State(pool): State<PgPool>,
     Path(workspace_id): Path<i32>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
@@ -370,7 +370,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_workspaces() {
+    async fn test_get_workspaces_successfully() {
         let app: Router = app().await;
 
         let req = Request::builder()
@@ -389,7 +389,25 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_workspace_by_id() {
+    async fn test_get_workspaces_failed_due_to_lack_of_ower_id_header() {
+        let app: Router = app().await;
+
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri("/workspaces")
+            .body(Body::empty())
+            .unwrap();
+        
+        let res = app
+            .oneshot(req)
+            .await
+            .unwrap();
+
+        assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_get_workspace_by_id_successfully() {
         let app: Router = app().await;
 
         let req = Request::builder()
@@ -405,6 +423,43 @@ mod tests {
             .unwrap();
 
         assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_get_workspace_by_id_failed_due_to_lack_of_ower_id_header() {
+        let app: Router = app().await;
+
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri("/workspaces/1")
+            .body(Body::empty())
+            .unwrap();
+        
+        let res = app
+            .oneshot(req)
+            .await
+            .unwrap();
+
+        assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_get_workspace_by_id_failed_due_to_invalid_id_param() {
+        let app: Router = app().await;
+
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri("/workspaces/hello")
+            .header("x-owner", 1)
+            .body(Body::empty())
+            .unwrap();
+        
+        let res = app
+            .oneshot(req)
+            .await
+            .unwrap();
+
+        assert_eq!(res.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]
@@ -435,5 +490,76 @@ mod tests {
 
         assert_eq!(body["success"], true);
         assert_eq!(body["data"]["status"], "Expired");
+    }
+
+    #[tokio::test]
+    async fn test_update_workspace_status_failed_due_to_lack_of_ower_id_header() {
+        let app: Router = app().await;
+
+        let req = Request::builder()
+            .method(Method::PUT)
+            .uri("/workspaces/1")
+            .header("content-type", "application/json")
+            .body(Body::from(
+                r#"{
+                    "status": "Expired"
+                }"#,
+            ))
+            .unwrap();
+        
+        let res = app
+            .oneshot(req)
+            .await
+            .unwrap();
+
+        assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_update_workspace_status_failed_due_to_invalid_id_param() {
+        let app: Router = app().await;
+
+        let req = Request::builder()
+            .method(Method::PUT)
+            .uri("/workspaces/hello")
+            .header("content-type", "application/json")
+            .header("x-owner", 1)
+            .body(Body::from(
+                r#"{
+                    "status": "Expired"
+                }"#,
+            ))
+            .unwrap();
+        
+        let res = app
+            .oneshot(req)
+            .await
+            .unwrap();
+
+        assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_update_workspace_status_failed_due_to_invalid_status_field() {
+        let app: Router = app().await;
+
+        let req = Request::builder()
+            .method(Method::PUT)
+            .uri("/workspaces/1")
+            .header("content-type", "application/json")
+            .header("x-owner", 1)
+            .body(Body::from(
+                r#"{
+                    "status": "NOT_VALID_HERE"
+                }"#,
+            ))
+            .unwrap();
+        
+        let res = app
+            .oneshot(req)
+            .await
+            .unwrap();
+
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
     }
 }

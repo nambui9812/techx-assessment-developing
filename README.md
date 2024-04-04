@@ -33,41 +33,52 @@ git clone https://github.com/nambui9812/techx-assessment-developing.git
 cd techx-assessment-developing
 ```
 * With Docker
+1. Start 2 Docker services
 ```
 docker compose up -d
+```
+2. Run migration
+```
+Follow the Migration instruction below
 ```
 * Without Docker
 1. Start PostgreSQL server (If needed)
 ```
 sudo systemctl start postgresql
 ```
-2. Login
+2. Run migration
 ```
-sudo -u postgres psql postgres
+Follow the Migration instruction below
 ```
-3. Setup user and database
+3. Start the Axum server
 ```
-CREATE ROLE user LOGIN PASSWORD 'password';
-CREATE DATABASE db WITH OWNER = user;
-\q
-```
-4. Login with new user and type in the password when prompted
-```
-psql -h localhost -d db -U user
-```
-5. Setup tables
-```
-Run all commands inside techx-assessment-developing/db/init.sql
-Update the DATABASE_URL inside .env file to "postgres://user:password@localhost:5432/db"
-```
-6. Start the Axum server
-```
+cargo build
 cargo run
 ```
+### Migration
+* Requirements
+1. PostgreSQL server is running
+2. .env file has valid `DATABASE_URL` field
+3. `sqlx-cli` installed
+```
+sudo apt install pkg-config
+cargo install sqlx-cli
+```
+* Steps
+1. Create database and run migrations
+```
+sqlx database create	(If database not exists yet)
+sqlx migration run
+```
+2. (Optional) Revert database if needed
+```
+sqlx migration revert	(Revert step by step)
+sqlx database drop		(Drop the database)
+```
 ### Usage
-* APIs
-1. Get `/` - Return `Hello world`
-2. Get `/users` - Return initialized users data
+* `/users` APIs
+1. GET `/` - Return `Hello world`
+2. GET `/users` - Return initialized users data
 ```
 {
 	"success": true,
@@ -78,25 +89,55 @@ cargo run
 	]
 }
 ```
-3. Post `/` - Create new user
+3. POST `/users` - Create new user
 ```
 {
 	"username": "username"
 }
 ```
+* `/workspaces` APIs
 > /workspaces domain require a custom header `x-ower`:`id_of_user`
-4. Get `/workspaces`  - Return all workspace of a user
-5. Get `/workspaces/:workspace_id` - Return specific workspace if owning
-6. Post `/workspaces` - Create new workspace
+1. GET `/workspaces`  - Return all workspace of a user
+2. GET `/workspaces/:workspace_id` - Return specific workspace if owning
+3. POST `/workspaces` - Create new workspace
 ```
 {
 	"name": "name",
 	"description": "description"
 }
 ```
-7. Put `/workspaces/:workspace_id` - Update status of workspace if owning
+4. PUT `/workspaces/:workspace_id` - Update status of workspace if owning
 ```
 {
 	"status": "One of ["Inactive", "Active", "Expired", "Provisioning"]"
 }
 ```
+### Test
+* Requirements
+1. PostgreSQL server is running
+2. Migrations were run, fake data was created
+```
+sqlx migrate run
+```
+* Run
+```
+cargo test
+```
+* Coverages:
+1. GET `/workspaces`
+	- test_database_connectivity
+	- test_get_workspaces_successfully
+	- test_get_workspaces_failed_due_to_lack_of_ower_id_header
+2. GET `/workspaces/:workspace_id`
+	- test_get_workspace_by_id_successfully
+	- test_get_workspace_by_id_failed_due_to_lack_of_ower_id_header
+	- test_get_workspace_by_id_failed_due_to_invalid_id_param
+3. POST `/workspaces`
+	- test_create_workspace_successfully
+	- test_create_workspace_failed_due_to_lack_of_ower_id_header
+	- test_create_workspace_failed_due_to_lack_of_name_field
+4. PUT `/workspaces/:workspace_id`
+	- test_update_workspace_status_successfully
+	- test_update_workspace_status_failed_due_to_lack_of_ower_id_header
+	- test_update_workspace_status_failed_due_to_invalid_id_param
+	- test_update_workspace_status_failed_due_to_invalid_status_field
